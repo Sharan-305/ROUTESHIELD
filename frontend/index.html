@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="RouteShield — Safer Route Planner. Compare routes using distance, travel time, verified road infrastructure, street lighting, and public safety data.">
+  <title>RouteShield — Safer Route Planner</title>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin="" />
+
+  <!-- App Styles -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Top Navigation Bar -->
+    <header class="top-nav" role="banner">
+      <div class="nav-brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M9 12l2 2 4-4" stroke="var(--accent-mint)"/>
+          </svg>
+        </div>
+        <div class="brand-title-wrap">
+          <h1 class="brand-title">RouteShield</h1>
+          <span class="brand-subtitle">Safer Route Planner</span>
+        </div>
+      </div>
+
+      <div class="nav-status-badge">
+        <span class="status-indicator live"></span>
+        <span class="status-text" id="systemStatusText">Map Ready</span>
+      </div>
+
+      <div class="nav-actions">
+        <button id="btnInfoModal" class="nav-btn icon-btn" title="About & Methodology" aria-label="About & Methodology">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 16v-4"/>
+            <path d="M12 8h.01"/>
+          </svg>
+        </button>
+        <button id="btnOpenReportModal" class="nav-btn secondary-btn" aria-label="Report Incident">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span class="btn-text">Report Hazard</span>
+        </button>
+        <button id="btnAuthToggle" class="nav-btn primary-btn" aria-label="Account Login">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          <span class="btn-text" id="authBtnText">Sign In</span>
+        </button>
+        <button id="btnMobileToggle" class="mobile-toggle-btn" aria-label="Toggle navigation drawer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="main-workspace">
+      <!-- Left Control Sidebar -->
+      <aside class="sidebar-panel" id="sidebarPanel" aria-label="Navigation controls and route results">
+        <div class="sidebar-scrollable">
+          
+          <!-- Route Planning Card -->
+          <section class="card panel-card planner-card">
+            <div class="card-header">
+              <h2 class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="9 11 12 14 22 4"/>
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+                </svg>
+                Plan Journey
+              </h2>
+              <div class="transport-modes" role="radiogroup" aria-label="Travel mode">
+                <button type="button" class="mode-btn active" data-mode="foot" title="Walking" aria-checked="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="5" r="2"/>
+                    <path d="M10 22l2-7 3 3v6"/>
+                    <path d="M14 13l2-4-5-3-3 4 3 2"/>
+                  </svg>
+                  <span>Walk</span>
+                </button>
+                <button type="button" class="mode-btn" data-mode="bike" title="Cycling" aria-checked="false">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="5.5" cy="17.5" r="3.5"/>
+                    <circle cx="18.5" cy="17.5" r="3.5"/>
+                    <path d="M15 6a1 1 0 1 0 0-2 1 1 0 0 0 0 2zm-3 11.5l3.5-7 3 3"/>
+                    <path d="M12 17.5l-3-6H5"/>
+                  </svg>
+                  <span>Bike</span>
+                </button>
+                <button type="button" class="mode-btn" data-mode="driving" title="Driving" aria-checked="false">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="8" width="20" height="11" rx="2"/>
+                    <circle cx="7" cy="16" r="2"/>
+                    <circle cx="17" cy="16" r="2"/>
+                    <path d="M5 8l2-4h10l2 4"/>
+                  </svg>
+                  <span>Drive</span>
+                </button>
+              </div>
+            </div>
+
+            <form id="routeForm" class="route-form" autocomplete="off" onsubmit="return false;">
+              <!-- Origin Field -->
+              <div class="input-group">
+                <label for="startInput" class="input-label">
+                  <span class="label-dot origin-dot"></span> Starting Location
+                </label>
+                <div class="input-wrapper">
+                  <input type="text" id="startInput" class="text-input" placeholder="Enter starting address or place..." autocomplete="off">
+                  <button type="button" id="btnCurrentLocation" class="input-action-btn" title="Use current GPS location" aria-label="Use current location">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+                    </svg>
+                  </button>
+                </div>
+                <div id="startSuggestions" class="suggestions-dropdown hidden" role="listbox"></div>
+              </div>
+
+              <!-- Swap Button -->
+              <div class="swap-divider">
+                <button type="button" id="btnSwapLocations" class="swap-btn" title="Swap origin and destination" aria-label="Swap locations">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M7 16V4m0 0L3 8m4-4l4 4m6 4v12m0 0l4-4m-4 4l-4-4"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Destination Field -->
+              <div class="input-group">
+                <label for="destInput" class="input-label">
+                  <span class="label-dot dest-dot"></span> Destination
+                </label>
+                <div class="input-wrapper">
+                  <input type="text" id="destInput" class="text-input" placeholder="Enter destination address or place..." autocomplete="off">
+                  <button type="button" id="btnClearDest" class="input-action-btn" title="Clear destination" aria-label="Clear destination">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="6" x2="6" y2="18"/>
+                      <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                </div>
+                <div id="destSuggestions" class="suggestions-dropdown hidden" role="listbox"></div>
+              </div>
+
+              <!-- Find Routes Button -->
+              <button type="submit" id="btnCalculateRoute" class="btn-primary-action">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="11" cy="11" r="8"/>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <span>Calculate Safer Routes</span>
+              </button>
+            </form>
+          </section>
+
+          <!-- Route Comparison Results Container -->
+          <section id="routeResultsSection" class="card panel-card results-card hidden" aria-live="polite">
+            <div class="card-header">
+              <h2 class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 12h18M3 6h18M3 18h18"/>
+                </svg>
+                Route Alternatives (<span id="routeCount">0</span>)
+              </h2>
+              <span class="card-badge" id="dataFreshnessBadge">Live Data</span>
+            </div>
+            
+            <div id="routesList" class="routes-list-container">
+              <!-- Route comparison cards populated via JS -->
+            </div>
+
+            <!-- Route Details Breakdown Accordion -->
+            <div id="activeRouteDetails" class="active-route-details hidden">
+              <!-- Detailed safety and segment breakdown -->
+            </div>
+          </section>
+
+          <!-- Safety Layers Toggle Card -->
+          <section class="card panel-card safety-layers-card">
+            <div class="card-header">
+              <h2 class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+                  <polyline points="2 17 12 22 22 17"/>
+                  <polyline points="2 12 12 17 22 12"/>
+                </svg>
+                Map Safety Overlays
+              </h2>
+              <button type="button" id="btnToggleAllLayers" class="text-link-btn">Reset</button>
+            </div>
+            <div class="layer-toggles-grid">
+              <label class="toggle-pill active" data-layer="streetlights">
+                <input type="checkbox" id="layerStreetlights" checked>
+                <span class="toggle-dot dot-yellow"></span>
+                <span class="toggle-label">Streetlights</span>
+              </label>
+              <label class="toggle-pill active" data-layer="hazards">
+                <input type="checkbox" id="layerHazards" checked>
+                <span class="toggle-dot dot-red"></span>
+                <span class="toggle-label">Road Hazards</span>
+              </label>
+              <label class="toggle-pill active" data-layer="reports">
+                <input type="checkbox" id="layerReports" checked>
+                <span class="toggle-dot dot-amber"></span>
+                <span class="toggle-label">Community Reports</span>
+              </label>
+              <label class="toggle-pill active" data-layer="infrastructure">
+                <input type="checkbox" id="layerInfrastructure" checked>
+                <span class="toggle-dot dot-blue"></span>
+                <span class="toggle-label">Pedestrian Infra</span>
+              </label>
+            </div>
+          </section>
+
+          <!-- Mandatory Safety & Data Disclaimer -->
+          <section class="card disclaimer-card" role="note">
+            <div class="disclaimer-header">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span>Safety Assessment Notice</span>
+            </div>
+            <p class="disclaimer-text">
+              RouteShield evaluates safety indicators based strictly on available open public infrastructure datasets and verified moderator reports. <strong>No route is guaranteed safe.</strong> Data coverage varies across municipalities; always exercise situational vigilance.
+            </p>
+          </section>
+        </div>
+      </aside>
+
+      <!-- Main Interactive Leaflet Map Area -->
+      <section class="map-view-wrapper" aria-label="Interactive Map">
+        <div id="map" class="map-canvas"></div>
+
+        <!-- Floating Map Legend -->
+        <div class="map-legend-card" id="mapLegend">
+          <div class="legend-header">
+            <span class="legend-title">Map Legend</span>
+            <button type="button" id="btnToggleLegend" class="legend-toggle-btn" aria-label="Toggle legend">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+          </div>
+          <div class="legend-content" id="legendContent">
+            <div class="legend-item">
+              <span class="legend-line line-primary"></span>
+              <span class="legend-desc">Recommended Route (Mint)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-line line-alt"></span>
+              <span class="legend-desc">Alternative Route (Subdued)</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-marker marker-light"></span>
+              <span class="legend-desc">Verified Streetlight Node</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-marker marker-hazard"></span>
+              <span class="legend-desc">Verified Public Road Hazard</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-marker marker-report"></span>
+              <span class="legend-desc">Community Report (Approved)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Map Controls -->
+        <div class="floating-map-controls">
+          <button id="btnMapRecenter" class="map-ctrl-btn" title="Recenter Map View" aria-label="Recenter map">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
+            </svg>
+          </button>
+          <button id="btnMapZoomIn" class="map-ctrl-btn" title="Zoom In" aria-label="Zoom in">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+          <button id="btnMapZoomOut" class="map-ctrl-btn" title="Zoom Out" aria-label="Zoom out">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Floating Notification / Feedback Toast -->
+        <div id="toastContainer" class="toast-container" aria-live="assertive"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Report Hazard / Incident Modal -->
+  <div id="modalReport" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modalReportTitle">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--hazard-amber)" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <h2 id="modalReportTitle">Report Infrastructure Hazard</h2>
+        </div>
+        <button type="button" class="modal-close-btn" data-close-modal="modalReport" aria-label="Close modal">&times;</button>
+      </div>
+      <form id="incidentReportForm" class="modal-form" enctype="multipart/form-data">
+        <p class="modal-instructions">
+          Submissions are audited by our moderation team before appearing on public safety maps.
+        </p>
+
+        <div class="form-group">
+          <label for="reportCategory" class="form-label">Hazard Category *</label>
+          <select id="reportCategory" class="form-select" required>
+            <option value="" disabled selected>Select category...</option>
+            <option value="poor_lighting">Poor / Defective Street Lighting</option>
+            <option value="road_damage">Road / Sidewalk Damage</option>
+            <option value="blocked_path">Blocked Pedestrian Path / Construction</option>
+            <option value="traffic_hazard">Traffic or Intersection Hazard</option>
+            <option value="other_infrastructure">Other Public Infrastructure Issue</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Location *</label>
+          <div class="input-wrapper">
+            <input type="text" id="reportLocationAddress" class="text-input" placeholder="Enter location or click map picker..." required>
+            <button type="button" id="btnPickReportLocation" class="input-action-btn" title="Pick point on map" aria-label="Pick location on map">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </button>
+          </div>
+          <span class="form-helper" id="reportCoordinatesLabel">No coordinates selected</span>
+          <input type="hidden" id="reportLatitude">
+          <input type="hidden" id="reportLongitude">
+        </div>
+
+        <div class="form-group">
+          <label for="reportDescription" class="form-label">Description *</label>
+          <textarea id="reportDescription" class="form-textarea" rows="3" placeholder="Provide factual details (e.g. 3 non-functional lights along north sidewalk)..." required maxlength="1000"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="reportPhoto" class="form-label">Optional Photo Evidence</label>
+          <input type="file" id="reportPhoto" class="form-file-input" accept="image/jpeg,image/png,image/webp">
+          <span class="form-helper">JPEG/PNG/WebP, max 5MB. Strips EXIF geolocation for privacy.</span>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="nav-btn secondary-btn" data-close-modal="modalReport">Cancel</button>
+          <button type="submit" id="btnSubmitReport" class="btn-primary-action">Submit for Review</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- User Authentication Modal -->
+  <div id="modalAuth" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modalAuthTitle">
+    <div class="modal-dialog auth-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent-mint)" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          <h2 id="modalAuthTitle">Account Access</h2>
+        </div>
+        <button type="button" class="modal-close-btn" data-close-modal="modalAuth" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab-btn active" id="tabSignIn">Sign In</button>
+        <button type="button" class="auth-tab-btn" id="tabRegister">Create Account</button>
+      </div>
+
+      <!-- Sign In Form -->
+      <form id="signInForm" class="modal-form">
+        <div class="form-group">
+          <label for="loginEmail" class="form-label">Email Address</label>
+          <input type="email" id="loginEmail" class="text-input" placeholder="name@example.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="loginPassword" class="form-label">Password</label>
+          <input type="password" id="loginPassword" class="text-input" placeholder="••••••••" required autocomplete="current-password">
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn-primary-action">Sign In</button>
+        </div>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" class="modal-form hidden">
+        <div class="form-group">
+          <label for="regName" class="form-label">Full Name</label>
+          <input type="text" id="regName" class="text-input" placeholder="Jane Doe" required autocomplete="name">
+        </div>
+        <div class="form-group">
+          <label for="regEmail" class="form-label">Email Address</label>
+          <input type="email" id="regEmail" class="text-input" placeholder="name@example.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="regPassword" class="form-label">Password (min 8 characters)</label>
+          <input type="password" id="regPassword" class="text-input" placeholder="••••••••" required minlength="8" autocomplete="new-password">
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn-primary-action">Create Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- About & Scoring Methodology Modal -->
+  <div id="modalInfo" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modalInfoTitle">
+    <div class="modal-dialog info-dialog">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <h2 id="modalInfoTitle">Safety Evaluation Methodology</h2>
+        </div>
+        <button type="button" class="modal-close-btn" data-close-modal="modalInfo" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="info-content-body">
+        <h3>Principles of RouteShield</h3>
+        <p>RouteShield was engineered to present objective, transparent road infrastructure and hazard data to help travelers make informed routing decisions.</p>
+        
+        <h4>Scoring Parameters & Weightings:</h4>
+        <ul class="methodology-list">
+          <li><strong>Street Lighting Density (35%):</strong> Evaluates verified lit ways vs. unlit segments derived from municipal open datasets and OpenStreetMap taggings.</li>
+          <li><strong>Pedestrian Infrastructure (25%):</strong> Availability of designated sidewalks, separated bike paths, and signalized crosswalks.</li>
+          <li><strong>Active Hazard Deductions (25%):</strong> Verified road obstacles, construction zones, or severe lighting defects within a 40m corridor of the route.</li>
+          <li><strong>Data Freshness & Completeness (15%):</strong> Measures recency and survey density. Where data is insufficient, an unsupported score is <em>never</em> fabricated.</li>
+        </ul>
+
+        <div class="info-callout">
+          <strong>Transparency Notice:</strong> A higher indicator score reflects favorable infrastructural data availability. It is not an assertion of absolute safety. Users must always stay alert and adapt to changing conditions.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-primary-action" data-close-modal="modalInfo">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+          crossorigin=""></script>
+
+  <!-- Provider Services -->
+  <script src="services/geocodingService.js"></script>
+  <script src="services/routingService.js"></script>
+
+  <!-- Application Logic -->
+  <script src="app.js"></script>
+</body>
+</html>
